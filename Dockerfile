@@ -32,7 +32,6 @@ COPY --from=builder /root/.local /root/.local
 
 # Copy application code
 COPY app/ ./app/
-COPY .env.example .env
 
 # Create necessary directories
 RUN mkdir -p output/videos static/videos
