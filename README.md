@@ -10,6 +10,23 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![WIP](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=for-the-badge)](https://github.com/NotYuSheng/GestureGPT)
 
+## 📐 Architecture
+
+![Architecture Diagram](docs/architecture.png)
+
+**System Components:**
+- **GestureGPT API** (FastAPI) - OpenAI-compatible endpoints with video lookup
+- **LLM Server** - Generates ASL-friendly text (OpenAI/Claude/Ollama/LM Studio)
+- **ASL Video Repository** - Pre-recorded sign language videos
+
+**Flow:**
+1. User sends text message
+2. LLM generates ASL-friendly response
+3. API looks up corresponding videos
+4. Returns list of video URLs + text
+
+See [architecture.puml](docs/architecture.puml) for the workflow diagram source.
+
 ## 🚀 Quick Start
 
 ### Using Docker (Recommended)
@@ -64,19 +81,19 @@ GestureGPT provides two ways to interact with sign language generation:
 ```
 User Text Input
     ↓
-LLM generates text response (configurable: OpenAI/Claude/Local)
+LLM generates ASL-friendly text (configurable: OpenAI/Claude/Local)
     ↓
-Text converted to sign language video
+API looks up videos from repository
     ↓
-Returns: { video_url, text_transcript }
+Returns: { video_urls: [...], text_transcript }
 ```
 
 ### ✨ Features
 
 - 🔄 **OpenAI-Compatible API** - Drop-in replacement for OpenAI chat endpoints
-- 🎥 **Video Generation** - Automatic ASL video creation from text
+- 🎥 **Video Lookup** - Retrieves pre-recorded ASL videos from repository
 - 🤖 **Multiple LLM Backends** - OpenAI, Claude, or local models (Ollama, LM Studio)
-- 🖼️ **Multiple Formats** - Support for MP4 and GIF outputs
+- 📋 **Multiple Video URLs** - Returns list of video URLs for playback
 - 🚀 **FastAPI Backend** - High-performance async API
 - 🐳 **Docker Ready** - Pre-built images on GHCR
 - 📱 **Streamlit Demo** - Interactive web interface included
@@ -155,7 +172,7 @@ Works like OpenAI's chat API but returns sign language videos.
 }
 ```
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "id": "chatcmpl-1234567890",
@@ -169,7 +186,15 @@ Works like OpenAI's chat API but returns sign language videos.
       "content": "Hello! I feel good. Thank you ask!"
     },
     "finish_reason": "stop",
-    "video_url": "http://localhost:8000/videos/sign_abc123_1234567890.mp4"
+    "video_urls": [
+      "http://localhost:8000/videos/HELLO.mp4",
+      "http://localhost:8000/videos/I.mp4",
+      "http://localhost:8000/videos/FEEL.mp4",
+      "http://localhost:8000/videos/GOOD.mp4",
+      "http://localhost:8000/videos/THANK.mp4",
+      "http://localhost:8000/videos/YOU.mp4",
+      "http://localhost:8000/videos/ASK.mp4"
+    ]
   }],
   "usage": {
     "prompt_tokens": 5,
@@ -207,7 +232,7 @@ response = client.chat.completions.create(
 )
 
 print(response.choices[0].message.content)
-print(response.choices[0].video_url)
+print(response.choices[0].video_urls)
 ```
 
 ### Direct Sign Language Endpoint
@@ -223,15 +248,27 @@ print(response.choices[0].video_url)
 }
 ```
 
-**Response:**
+**Response (200 OK):**
 ```json
 {
   "success": true,
-  "video_url": "http://localhost:8000/videos/sign_abc123_1234567890.mp4",
+  "video_urls": [
+    "http://localhost:8000/videos/HELLO.mp4",
+    "http://localhost:8000/videos/HOW.mp4",
+    "http://localhost:8000/videos/YOU.mp4"
+  ],
   "text": "Hello, how are you?",
   "format": "mp4",
-  "duration": 3.5,
   "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": "Video not found",
+  "detail": "No video available for sign: CRYPTOCURRENCY"
 }
 ```
 
@@ -253,11 +290,11 @@ response = requests.post(
 )
 
 data = response.json()
-video_url = data["choices"][0]["video_url"]
+video_urls = data["choices"][0]["video_urls"]
 text_response = data["choices"][0]["message"]["content"]
 
 print(f"Text: {text_response}")
-print(f"Video: {video_url}")
+print(f"Videos: {video_urls}")
 ```
 
 ### JavaScript/Node.js Example
@@ -275,7 +312,7 @@ const response = await fetch('http://localhost:8000/v1/chat/completions', {
 
 const data = await response.json();
 console.log('Text:', data.choices[0].message.content);
-console.log('Video:', data.choices[0].video_url);
+console.log('Videos:', data.choices[0].video_urls);
 ```
 
 ## 🤖 LLM Configuration
@@ -389,7 +426,7 @@ For real sign language videos, you can integrate:
 
 1. **Pre-recorded ASL Video Dataset**
    - Use datasets like [WLASL (Word-Level ASL)](https://dxli94.github.io/WLASL/)
-   - Stitch individual sign videos together
+   - Return individual sign video URLs for client-side playback
 
 2. **3D Avatar Animation**
    - Use sign language avatar systems
@@ -419,23 +456,43 @@ For real sign language videos, you can integrate:
 
 All endpoints follow consistent patterns:
 
-**Success Response:**
+**Success Response (200 OK):**
 ```json
 {
   "success": true,
-  "video_url": "http://localhost:8000/videos/...",
+  "video_urls": [
+    "http://localhost:8000/videos/HELLO.mp4",
+    "http://localhost:8000/videos/WORLD.mp4"
+  ],
   "text": "Response text",
-  "format": "mp4",
-  "duration": 3.5
+  "format": "mp4"
 }
 ```
 
-**Error Response:**
+**Error Response (400 Bad Request):**
 ```json
 {
   "success": false,
-  "error": "Error message",
-  "detail": "Additional details"
+  "error": "Invalid request",
+  "detail": "Missing required field: text"
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "success": false,
+  "error": "Video not found",
+  "detail": "No video available for sign: WORD"
+}
+```
+
+**Error Response (500 Internal Server Error):**
+```json
+{
+  "success": false,
+  "error": "Internal server error",
+  "detail": "Failed to process request"
 }
 ```
 

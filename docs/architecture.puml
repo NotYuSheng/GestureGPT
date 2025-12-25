@@ -6,7 +6,7 @@ LAYOUT_WITH_LEGEND()
 Person(user, "User", "Requests sign language video responses")
 
 System_Boundary(gesturegpt, "GestureGPT") {
-  Container(api, "GestureGPT API", "FastAPI", "OpenAI-compatible endpoints\n- Text to ASL conversion\n- Video stitching\n- Response formatting")
+  Container(api, "GestureGPT API", "FastAPI", "OpenAI-compatible endpoints\n- Video lookup\n- Response formatting")
 
   ContainerDb(video_repo, "ASL Video Repository", "File System", "Pre-recorded sign videos\n- Individual signs (MP4)\n- Fingerspelling alphabet\n- Common phrases")
 }
@@ -16,31 +16,17 @@ System_Ext(llm, "LLM Server", "Generates ASL-friendly text responses\n(OpenAI / 
 ' Main flow
 Rel(user, api, "POST /v1/chat/completions\n{messages: [...], format: 'mp4'}")
 Rel(api, llm, "Generate text response")
-Rel(llm, api, "ASL-friendly text\n'Hello! I feel good.'")
-Rel(api, video_repo, "Lookup & stitch videos\n['HELLO', 'I', 'FEEL', 'GOOD']")
-Rel(video_repo, api, "Video files")
-Rel(api, user, "JSON + video URL\n/videos/response_abc123.mp4")
+Rel(llm, api, "ASL-friendly text\n'HELLO I FEEL GOOD'")
+Rel(api, video_repo, "Lookup videos\n['HELLO', 'I', 'FEEL', 'GOOD']")
+Rel(video_repo, api, "Video URLs")
+Rel(api, user, "JSON + video URLs\n['/videos/HELLO.mp4', ...]")
 
 note right of api
   **Processing Flow:**
   1. Receive user message
-  2. Get LLM text response
-  3. Convert to ASL glosses
-  4. Lookup videos from repo
-  5. Stitch videos together
-  6. Return video URL
-end note
-
-note right of video_repo
-  **Dataset Structure:**
-  datasets/
-  ├── signs/
-  │   ├── HELLO.mp4
-  │   ├── GOOD.mp4
-  │   └── ...
-  └── fingerspell/
-      ├── A.mp4
-      └── ...
+  2. Get ASL-friendly text from LLM
+  3. Lookup videos from repo
+  4. Return video URLs + text
 end note
 
 @enduml
