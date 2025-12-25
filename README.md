@@ -1,6 +1,6 @@
 # GestureGPT 👋
 
-> **Thanks for visiting!** This project is a work in progress. The core API is functional, but the sign language video generation currently uses placeholder animations. Contributions and feedback are welcome!
+> **Thanks for visiting!** This project is a work in progress.
 
 **Sign Language LLM-style API** - An API server that responds with sign language videos instead of text, featuring OpenAI-compatible endpoints.
 
