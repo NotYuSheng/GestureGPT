@@ -66,7 +66,7 @@ class ChatCompletionResponse(BaseModel):
                     "index": 0,
                     "message": {
                         "role": "assistant",
-                        "content": "Hello! I'm doing great, thank you for asking!"
+                        "content": "Hello! I feel good. Thank you ask!"
                     },
                     "finish_reason": "stop",
                     "video_url": "/videos/sign_abc123_1234567890.mp4"

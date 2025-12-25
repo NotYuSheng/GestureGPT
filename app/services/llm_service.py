@@ -25,14 +25,15 @@ class LLMService:
         self._init_provider()
 
         # Fallback responses for placeholder mode
+        # Note: Responses use ASL-friendly simplified English
         self.responses = {
-            "hello": "Hello! I'm doing great, thank you for asking! How can I help you today?",
-            "how are you": "I'm doing wonderful! Thanks for asking. How are you doing?",
-            "thank you": "You're welcome! I'm happy to help!",
-            "bye": "Goodbye! Have a great day!",
-            "help": "I'm GestureGPT, a sign language assistant. I respond to your messages in sign language! Ask me anything.",
-            "what is your name": "I'm GestureGPT, your sign language assistant!",
-            "weather": "I'm sorry, I don't have access to weather information, but I hope it's beautiful where you are!",
+            "hello": "Hello! I feel good. Thank you. How I help you?",
+            "how are you": "I feel wonderful! Thank you. You feel how?",
+            "thank you": "Welcome! Happy help you!",
+            "bye": "Goodbye! Have good day!",
+            "help": "I GestureGPT. Sign language assistant. I respond sign language. Ask me anything.",
+            "what is your name": "My name GestureGPT. Sign language assistant.",
+            "weather": "Sorry. I not have weather information. Hope beautiful where you!",
         }
 
     def _init_provider(self):
@@ -165,8 +166,8 @@ class LLMService:
             if keyword in last_message:
                 return response
 
-        # Default response
+        # Default response (ASL-friendly format)
         if "?" in last_message:
-            return f"That's an interesting question! You asked: '{user_messages[-1].content}'. I'll do my best to help!"
+            return f"Interesting question! You ask: '{user_messages[-1].content}'. I help you!"
         else:
-            return f"I understand you said: '{user_messages[-1].content}'. That's great! How else can I assist you?"
+            return f"I understand: '{user_messages[-1].content}'. Good! How I help more?"
