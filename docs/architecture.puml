@@ -7,11 +7,11 @@ Person(user, "User", "Requests sign language video responses")
 
 System_Boundary(gesturegpt, "GestureGPT") {
   Container(api, "GestureGPT API", "FastAPI", "OpenAI-compatible endpoints\n- Video lookup\n- Response formatting")
-
-  ContainerDb(video_repo, "ASL Video Repository", "File System", "Pre-recorded sign videos\n- Individual signs (MP4)\n- Fingerspelling alphabet\n- Common phrases")
 }
 
 System_Ext(llm, "LLM Server", "Generates ASL-friendly text responses\n(OpenAI / Claude / Ollama / LM Studio)")
+
+System_Ext(video_repo, "ASL Video Repository", "Pre-recorded sign videos\n(WLASL / ASL-LEX / Third-party)")
 
 ' Main flow
 Rel(user, api, "POST /v1/chat/completions\n{messages: [...], format: 'mp4'}")
