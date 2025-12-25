@@ -3,126 +3,44 @@
 
 LAYOUT_WITH_LEGEND()
 
-Person(user, "User", "Person requesting sign language video responses")
+Person(user, "User", "Requests sign language video responses")
 
-System_Boundary(gesturegpt, "GestureGPT System") {
+System_Boundary(gesturegpt, "GestureGPT") {
+  Container(api, "GestureGPT API", "FastAPI", "OpenAI-compatible endpoints\n- Text to ASL conversion\n- Video stitching\n- Response formatting")
 
-  Container(api_gateway, "FastAPI Gateway", "FastAPI", "OpenAI-compatible API endpoint, handles requests and responses")
-
-  System_Boundary(text_generation, "Text Generation Layer") {
-    Container(llm_router, "LLM Router", "Python Service", "Routes to configured LLM provider (OpenAI/Claude/Local)")
-
-    Container(openai_llm, "OpenAI Provider", "OpenAI SDK", "GPT-3.5/GPT-4 text generation")
-    Container(claude_llm, "Anthropic Provider", "Anthropic SDK", "Claude text generation")
-    Container(local_llm, "Local LLM Provider", "OpenAI-compatible", "Ollama/LM Studio local models")
-  }
-
-  System_Boundary(sign_processing, "Sign Language Processing Layer") {
-    Container(sign_mapper, "Sign Mapper Service", "Python Service", "Converts English text to ASL glosses, handles grammar mapping")
-
-    Container(video_lookup, "Video Lookup Service", "Python Service", "Retrieves video paths from dataset index, fallback to fingerspelling")
-
-    Container(video_stitcher, "Video Stitcher", "FFmpeg/OpenCV", "Concatenates individual sign videos into final output")
-
-    Container(cache_service, "Cache Service", "Python Service", "Caches frequently used phrases and stitched videos")
-  }
-
-  System_Boundary(storage, "Storage Layer") {
-    ContainerDb(video_dataset, "ASL Video Dataset", "File System", "Pre-recorded sign videos (WLASL, ASL-LEX)\n- signs/\n- fingerspell/\n- phrases/")
-
-    ContainerDb(dataset_index, "Dataset Index", "JSON/SQLite", "Metadata index mapping glosses to video files")
-
-    ContainerDb(video_cache, "Video Cache", "File System", "Cached stitched videos for common phrases")
-
-    ContainerDb(phrase_cache, "Phrase Cache", "Redis/Memory", "In-memory cache for frequently requested texts")
-  }
+  ContainerDb(video_repo, "ASL Video Repository", "File System", "Pre-recorded sign videos\n- Individual signs (MP4)\n- Fingerspelling alphabet\n- Common phrases")
 }
 
-System_Boundary(external_systems, "External Systems") {
-  System_Ext(openai_api, "OpenAI API", "External GPT models")
-  System_Ext(anthropic_api, "Anthropic API", "External Claude models")
-  System_Ext(lm_studio, "LM Studio", "Local LLM server on user machine")
-}
+System_Ext(llm, "LLM Server", "Generates ASL-friendly text responses\n(OpenAI / Claude / Ollama / LM Studio)")
 
-' User interaction flow
-Rel(user, api_gateway, "POST /v1/chat/completions\n{messages: [...], format: 'mp4'}")
+' Main flow
+Rel(user, api, "POST /v1/chat/completions\n{messages: [...], format: 'mp4'}")
+Rel(api, llm, "Generate text response")
+Rel(llm, api, "ASL-friendly text\n'Hello! I feel good.'")
+Rel(api, video_repo, "Lookup & stitch videos\n['HELLO', 'I', 'FEEL', 'GOOD']")
+Rel(video_repo, api, "Video files")
+Rel(api, user, "JSON + video URL\n/videos/response_abc123.mp4")
 
-' API Gateway to LLM routing
-Rel(api_gateway, llm_router, "Generate text response for user message")
-
-' LLM Router to providers
-Rel(llm_router, openai_llm, "Generate response (if provider=openai)")
-Rel(llm_router, claude_llm, "Generate response (if provider=anthropic)")
-Rel(llm_router, local_llm, "Generate response (if provider=custom)")
-
-' LLM providers to external systems
-Rel(openai_llm, openai_api, "API request (HTTPS)")
-Rel(claude_llm, anthropic_api, "API request (HTTPS)")
-Rel(local_llm, lm_studio, "API request (HTTP)")
-
-' Text to sign language processing
-Rel(llm_router, sign_mapper, "ASL-formatted text:\n'Hello! I feel good.'")
-Rel(sign_mapper, video_lookup, "ASL glosses:\n['HELLO', 'I', 'FEEL', 'GOOD']")
-
-' Video lookup and retrieval
-Rel(video_lookup, dataset_index, "Query: find videos for glosses")
-Rel(dataset_index, video_dataset, "Returns: video file paths")
-Rel(video_lookup, video_dataset, "Retrieve video files:\n[HELLO.mp4, I.mp4, FEEL.mp4, GOOD.mp4]")
-
-' Cache check before video generation
-Rel(sign_mapper, phrase_cache, "Check if phrase cached")
-Rel(video_lookup, video_cache, "Check if video already stitched")
-
-' Video stitching
-Rel(video_lookup, video_stitcher, "List of video paths to concatenate")
-Rel(video_stitcher, video_cache, "Store stitched video")
-
-' Cache updates
-Rel(video_stitcher, phrase_cache, "Update cache with new phrase")
-
-' Response flow
-Rel(video_stitcher, api_gateway, "Final video URL:\n/videos/response_abc123.mp4")
-Rel(api_gateway, user, "JSON response:\n{message: {...}, video_url: '...'}")
-
-' Annotations
-note right of sign_mapper
-  **Sign Mapping Logic:**
-  1. Tokenize English text
-  2. Remove articles (a, the)
-  3. Convert to ASL grammar
-  4. Map to sign glosses
-
-  Example:
-  "I am feeling good"
-  → "I FEEL GOOD"
+note right of api
+  **Processing Flow:**
+  1. Receive user message
+  2. Get LLM text response
+  3. Convert to ASL glosses
+  4. Lookup videos from repo
+  5. Stitch videos together
+  6. Return video URL
 end note
 
-note right of video_lookup
-  **Lookup Strategy:**
-  1. Exact match in dataset
-  2. Synonym/similar sign
-  3. Fingerspell if not found
-
-  Example:
-  "CRYPTOCURRENCY" → not found
-  → Fingerspell: C-R-Y-P-T-O-...
-end note
-
-note right of video_dataset
-  **Dataset Sources:**
-  - WLASL: 2,000+ signs
-  - ASL-LEX: 2,700+ lexical signs
-  - SignBank: Comprehensive ASL
-  - Custom fingerspelling alphabet
-end note
-
-note right of video_stitcher
-  **Stitching Process:**
-  1. Load individual videos
-  2. Add smooth transitions
-  3. Concatenate with FFmpeg
-  4. Optimize output size
-  5. Cache for reuse
+note right of video_repo
+  **Dataset Structure:**
+  datasets/
+  ├── signs/
+  │   ├── HELLO.mp4
+  │   ├── GOOD.mp4
+  │   └── ...
+  └── fingerspell/
+      ├── A.mp4
+      └── ...
 end note
 
 @enduml
