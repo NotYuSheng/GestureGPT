@@ -7,6 +7,7 @@
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/NotYuSheng/GestureGPT/pkgs/container/gesturegpt)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![WIP](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=for-the-badge)](https://github.com/NotYuSheng/GestureGPT)
 
 ## 🚀 Quick Start
@@ -281,12 +282,6 @@ console.log('Video:', data.choices[0].video_url);
 
 GestureGPT supports multiple LLM providers. Configure in `.env`:
 
-### Placeholder (Default - No API Key Needed)
-
-```bash
-LLM_PROVIDER=placeholder
-```
-
 ### OpenAI
 
 ```bash
@@ -456,7 +451,7 @@ This is a personal project, but suggestions and improvements are welcome!
 
 ## 📄 License
 
-This project is for educational and personal use.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 💬 Support
 
