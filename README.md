@@ -1,0 +1,490 @@
+# GestureGPT 👋
+
+> **Thanks for visiting!** This project is a work in progress. The core API is functional, but the sign language video generation currently uses placeholder animations. Contributions and feedback are welcome!
+
+**Sign Language LLM-style API** - An API server that responds with sign language videos instead of text, featuring OpenAI-compatible endpoints.
+
+[![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://github.com/NotYuSheng/GestureGPT/pkgs/container/gesturegpt)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![WIP](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=for-the-badge)](https://github.com/NotYuSheng/GestureGPT)
+
+## 🚀 Quick Start
+
+### Using Docker (Recommended)
+
+```bash
+# Clone the repository
+git clone https://github.com/NotYuSheng/GestureGPT.git
+cd GestureGPT/demo
+
+# Start backend + demo
+docker-compose up -d
+
+# Access the demo at http://localhost:8501
+# Access the API at http://localhost:8000
+```
+
+### Using Pre-built Image
+
+```bash
+# Pull and run the backend
+docker pull ghcr.io/notyusheng/gesturegpt:latest
+docker run -p 8000:8000 ghcr.io/notyusheng/gesturegpt:latest
+
+# Access API docs at http://localhost:8000/docs
+```
+
+**See [Docker Quick Start Guide](docs/DOCKER_QUICKSTART.md) for detailed instructions.**
+
+## 📋 Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Installation](#installation)
+- [Documentation](#documentation)
+- [API Endpoints](#api-endpoints)
+- [Usage Examples](#usage-examples)
+- [LLM Configuration](#llm-configuration)
+- [Project Structure](#project-structure)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+
+## Overview
+
+GestureGPT provides two ways to interact with sign language generation:
+
+1. **OpenAI-Compatible Chat Endpoint** (`/v1/chat/completions`) - Works like ChatGPT but responds with sign language videos
+2. **Direct Sign Language Endpoint** (`/api/sign-language/generate`) - Direct text-to-sign-language conversion
+
+### How It Works
+
+```
+User Text Input
+    ↓
+LLM generates text response (configurable: OpenAI/Claude/Local)
+    ↓
+Text converted to sign language video
+    ↓
+Returns: { video_url, text_transcript }
+```
+
+### ✨ Features
+
+- 🔄 **OpenAI-Compatible API** - Drop-in replacement for OpenAI chat endpoints
+- 🎥 **Video Generation** - Automatic ASL video creation from text
+- 🤖 **Multiple LLM Backends** - OpenAI, Claude, or local models (Ollama, LM Studio)
+- 🖼️ **Multiple Formats** - Support for MP4 and GIF outputs
+- 🚀 **FastAPI Backend** - High-performance async API
+- 🐳 **Docker Ready** - Pre-built images on GHCR
+- 📱 **Streamlit Demo** - Interactive web interface included
+- 📚 **Auto-generated Docs** - Swagger UI and ReDoc
+- 🔌 **Easy Integration** - Works with OpenAI Python SDK
+
+## 🛠️ Installation
+
+### Option 1: Docker (Recommended)
+
+See [Demo README](demo/README.md) or [Docker Quick Start Guide](docs/DOCKER_QUICKSTART.md)
+
+```bash
+cd demo
+docker-compose up -d
+```
+
+### Option 2: Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/NotYuSheng/GestureGPT.git
+cd GestureGPT
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Copy environment file
+cp .env.example .env
+
+# Run the server
+python -m app.main
+```
+
+### Option 3: Using Pre-built Docker Image
+
+```bash
+docker pull ghcr.io/notyusheng/gesturegpt:latest
+docker run -p 8000:8000 -v $(pwd)/output:/app/output ghcr.io/notyusheng/gesturegpt:latest
+```
+
+## 📖 Documentation
+
+- **Swagger UI**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
+- **Health Check**: http://localhost:8000/health
+- **Streamlit Demo**: http://localhost:8501 (when running with demo)
+
+### Guides
+
+- [Docker Quick Start](docs/DOCKER_QUICKSTART.md) - Get running in 2 minutes
+- [LLM Configuration](docs/LLM_CONFIGURATION.md) - Configure OpenAI/Claude/Local LLMs
+- [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment
+- [Demo Usage](demo/README.md) - Using the Streamlit demo
+
+## 🔌 API Endpoints
+
+### OpenAI-Compatible Chat Endpoint
+
+**POST** `/v1/chat/completions`
+
+Works like OpenAI's chat API but returns sign language videos.
+
+**Request:**
+```json
+{
+  "model": "gesturegpt-v1",
+  "messages": [
+    {"role": "user", "content": "Hello, how are you?"}
+  ],
+  "format": "mp4"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "chatcmpl-1234567890",
+  "object": "chat.completion",
+  "created": 1704067200,
+  "model": "gesturegpt-v1",
+  "choices": [{
+    "index": 0,
+    "message": {
+      "role": "assistant",
+      "content": "Hello! I'm doing great, thank you for asking!"
+    },
+    "finish_reason": "stop",
+    "video_url": "http://localhost:8000/videos/sign_abc123_1234567890.mp4"
+  }],
+  "usage": {
+    "prompt_tokens": 5,
+    "completion_tokens": 10,
+    "total_tokens": 15
+  }
+}
+```
+
+**Example using curl:**
+```bash
+curl -X POST "http://localhost:8000/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gesturegpt-v1",
+    "messages": [{"role": "user", "content": "Hello, how are you?"}],
+    "format": "mp4"
+  }'
+```
+
+**Example using OpenAI Python SDK:**
+```python
+from openai import OpenAI
+
+# Point to your local GestureGPT server
+client = OpenAI(
+    base_url="http://localhost:8000/v1",
+    api_key="not-needed"
+)
+
+response = client.chat.completions.create(
+    model="gesturegpt-v1",
+    messages=[{"role": "user", "content": "Hello, how are you?"}],
+    extra_body={"format": "mp4"}
+)
+
+print(response.choices[0].message.content)
+print(response.choices[0].video_url)
+```
+
+### Direct Sign Language Endpoint
+
+**POST** `/api/sign-language/generate`
+
+**Request:**
+```json
+{
+  "text": "Hello, how are you?",
+  "format": "mp4",
+  "include_subtitles": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "video_url": "http://localhost:8000/videos/sign_abc123_1234567890.mp4",
+  "text": "Hello, how are you?",
+  "format": "mp4",
+  "duration": 3.5,
+  "timestamp": "2024-01-15T10:30:00"
+}
+```
+
+## 💡 Usage Examples
+
+### Python Example
+
+```python
+import requests
+
+# Using the chat endpoint
+response = requests.post(
+    "http://localhost:8000/v1/chat/completions",
+    json={
+        "model": "gesturegpt-v1",
+        "messages": [{"role": "user", "content": "What is sign language?"}],
+        "format": "mp4"
+    }
+)
+
+data = response.json()
+video_url = data["choices"][0]["video_url"]
+text_response = data["choices"][0]["message"]["content"]
+
+print(f"Text: {text_response}")
+print(f"Video: {video_url}")
+```
+
+### JavaScript/Node.js Example
+
+```javascript
+const response = await fetch('http://localhost:8000/v1/chat/completions', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    model: 'gesturegpt-v1',
+    messages: [{ role: 'user', content: 'Hello!' }],
+    format: 'mp4'
+  })
+});
+
+const data = await response.json();
+console.log('Text:', data.choices[0].message.content);
+console.log('Video:', data.choices[0].video_url);
+```
+
+## 🤖 LLM Configuration
+
+GestureGPT supports multiple LLM providers. Configure in `.env`:
+
+### Placeholder (Default - No API Key Needed)
+
+```bash
+LLM_PROVIDER=placeholder
+```
+
+### OpenAI
+
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+OPENAI_MODEL=gpt-3.5-turbo
+```
+
+### Anthropic Claude
+
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_MODEL=claude-3-opus-20240229
+```
+
+### Local LLM (Ollama, LM Studio, etc.)
+
+```bash
+LLM_PROVIDER=custom
+CUSTOM_LLM_ENDPOINT=http://localhost:11434/v1/chat/completions
+CUSTOM_LLM_MODEL=llama2
+```
+
+**See [LLM Configuration Guide](docs/LLM_CONFIGURATION.md) for detailed setup.**
+
+## 📁 Project Structure
+
+```
+GestureGPT/
+├── app/
+│   ├── api/
+│   │   ├── chat.py              # OpenAI-compatible endpoint
+│   │   └── sign_language.py     # Direct conversion endpoint
+│   ├── models/
+│   │   └── schemas.py           # Pydantic models
+│   ├── services/
+│   │   ├── llm_service.py       # LLM text generation
+│   │   └── sign_language_service.py  # Video generation
+│   └── main.py                  # FastAPI application
+├── demo/
+│   ├── streamlit_app.py         # Streamlit demo app
+│   ├── Dockerfile               # Demo container
+│   ├── docker-compose.yml       # Backend + Demo orchestration
+│   └── README.md                # Demo documentation
+├── docs/
+│   ├── README.md                # Docs index
+│   ├── DOCKER_QUICKSTART.md     # Quick start guide
+│   ├── LLM_CONFIGURATION.md     # LLM setup guide
+│   └── DEPLOYMENT.md            # Production deployment
+├── .github/
+│   └── workflows/
+│       └── docker-publish.yml   # GHCR auto-build
+├── output/                      # Generated videos
+├── Dockerfile                   # Backend container
+├── requirements.txt             # Python dependencies
+├── .env.example                 # Environment template
+└── README.md                    # This file
+```
+
+## 🔨 Development
+
+### Local Development Setup
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run with hot reload
+python -m app.main
+
+# Or with uvicorn
+uvicorn app.main:app --reload
+```
+
+### Building Docker Image
+
+```bash
+# Build locally
+docker build -t gesturegpt:dev .
+
+# Run local build
+docker run -p 8000:8000 gesturegpt:dev
+```
+
+### Running Tests
+
+```bash
+# TODO: Add tests
+pytest tests/
+```
+
+## 📝 Development Notes
+
+### Current Implementation
+
+The current implementation generates **demo videos** with animated text and placeholder hand animations. This is perfect for:
+- Testing the API architecture
+- Developing client applications
+- Prototyping integrations
+
+### Production-Ready Implementation
+
+For real sign language videos, you can integrate:
+
+1. **Pre-recorded ASL Video Dataset**
+   - Use datasets like [WLASL (Word-Level ASL)](https://dxli94.github.io/WLASL/)
+   - Stitch individual sign videos together
+
+2. **3D Avatar Animation**
+   - Use sign language avatar systems
+   - Examples: SignSynth, JASigning
+
+3. **ML-Based Generation**
+   - Train or use pre-trained models
+   - Text → Pose → Video pipeline
+
+4. **Real LLM Integration**
+   - Already supported! See [LLM Configuration](docs/LLM_CONFIGURATION.md)
+   - Supports OpenAI, Claude, or local LLMs
+
+## 🗺️ Roadmap
+
+- [ ] Integrate real ASL video dataset
+- [ ] Add authentication and rate limiting
+- [ ] Support for multiple sign languages (BSL, ISL, etc.)
+- [ ] Video caching and optimization
+- [ ] WebSocket support for streaming
+- [ ] Multi-language text support
+- [ ] User feedback and correction system
+- [ ] Add comprehensive tests
+- [ ] Performance benchmarks
+
+## 📊 API Response Format
+
+All endpoints follow consistent patterns:
+
+**Success Response:**
+```json
+{
+  "success": true,
+  "video_url": "http://localhost:8000/videos/...",
+  "text": "Response text",
+  "format": "mp4",
+  "duration": 3.5
+}
+```
+
+**Error Response:**
+```json
+{
+  "success": false,
+  "error": "Error message",
+  "detail": "Additional details"
+}
+```
+
+## 🤝 Contributing
+
+This is a personal project, but suggestions and improvements are welcome!
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is for educational and personal use.
+
+## 💬 Support
+
+For issues or questions:
+- Open an issue on [GitHub](https://github.com/NotYuSheng/GestureGPT/issues)
+- Check the [Discussion board](https://github.com/NotYuSheng/GestureGPT/discussions)
+
+## 🙏 Acknowledgments
+
+- FastAPI for the excellent web framework
+- OpenCV for video processing
+- The sign language community for inspiration
+
+## 📚 Additional Resources
+
+- [API Documentation](http://localhost:8000/docs) (when running)
+- [Docker Quick Start](docs/DOCKER_QUICKSTART.md)
+- [LLM Configuration Guide](docs/LLM_CONFIGURATION.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Streamlit Demo](demo/README.md)
+
+---
+
+<div align="center">
+  <p>Built with ❤️ for the sign language community</p>
+  <p>
+    <a href="https://github.com/NotYuSheng/GestureGPT">GitHub</a> •
+    <a href="https://github.com/NotYuSheng/GestureGPT/pkgs/container/gesturegpt">Docker Image</a> •
+    <a href="http://localhost:8000/docs">API Docs</a>
+  </p>
+</div>
