@@ -43,7 +43,6 @@ Transform text into American Sign Language (ASL) videos through an OpenAI-compat
 - [Project Structure](#-project-structure)
 - [Development](#-development)
 - [Deployment](#-deployment)
-- [Roadmap](#-roadmap)
 - [Troubleshooting](#-troubleshooting)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -826,45 +825,6 @@ server {
 ```
 
 **See [Deployment Guide](docs/DEPLOYMENT.md) for detailed production setup.**
-
----
-
-## 🗺️ Roadmap
-
-### Current Status (v0.1.x)
-
-- [x] OpenAI-compatible API endpoints
-- [x] Multi-provider LLM integration (OpenAI, Claude, Local)
-- [x] SignASL.org video integration
-- [x] Local video URL caching
-- [x] ASL grammar normalization
-- [x] Streamlit demo interface
-- [x] Docker containerization
-- [x] Auto-publishing to GHCR
-- [x] Basic API documentation
-
-### Upcoming Features (v0.2.x)
-
-- [ ] Authentication and API key management
-- [ ] Rate limiting per user/API key
-- [ ] User feedback and correction system
-- [ ] Comprehensive test suite (unit + integration)
-- [ ] Performance benchmarks and optimization
-- [ ] Video format conversion (MP4 ↔ GIF)
-- [ ] Batch text-to-ASL conversion endpoint
-- [ ] WebSocket support for streaming responses
-
-### Future Enhancements (v0.3+)
-
-- [ ] Support for additional sign languages (BSL, ISL, Auslan)
-- [ ] Advanced video caching with CDN integration
-- [ ] ML-based video quality assessment
-- [ ] Custom video repository support
-- [ ] Analytics dashboard for usage metrics
-- [ ] Multi-language text input support
-- [ ] Improved ASL grammar rules engine
-- [ ] Video concatenation service (combine individual signs)
-- [ ] Community-contributed sign video submissions
 
 ---
 
