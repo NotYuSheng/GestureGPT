@@ -16,7 +16,7 @@ services:
       start_period: 5s
 
   gesturegpt:
-    image: ghcr.io/notyusheng/gesturegpt:latest
+    image: ghcr.io/notyusheng/gesturegpt:v0.0.0-1205a30
     container_name: gesturegpt-backend
     ports:
       - "8000:8000"
@@ -32,6 +32,7 @@ services:
 
       # OpenAI (if LLM_PROVIDER=openai)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://api.openai.com/v1}
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-3.5-turbo}
 
       # Anthropic (if LLM_PROVIDER=anthropic)

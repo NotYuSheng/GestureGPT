@@ -55,6 +55,25 @@ st.markdown("""
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
+    /* Chat messages container with scroll */
+    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
+        max-height: 600px;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+    /* Keep chat input at bottom */
+    .stChatFloatingInputContainer {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 1rem 0;
+        z-index: 100;
+        border-top: 1px solid #e0e0e0;
+    }
+    /* Improve chat message spacing */
+    .stChatMessage {
+        margin-bottom: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,17 +147,21 @@ with tab1:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Display chat history
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
-            if "user_input_asl" in message and message["user_input_asl"]:
-                st.info(f"💡 **Your message in ASL:** {message['user_input_asl']}")
-            if "video_urls" in message:
-                for video_url in message["video_urls"]:
-                    render_video(video_url, autoplay=autoplay, max_size=size_px)
-            if "missing_videos" in message and message["missing_videos"]:
-                st.warning(f"⚠️ Videos not available for: {', '.join(message['missing_videos'])}")
+    # Create a container for chat messages with fixed height and scroll
+    chat_container = st.container()
+
+    with chat_container:
+        # Display chat history
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+                if "user_input_asl" in message and message["user_input_asl"]:
+                    st.info(f"💡 **Your message in ASL:** {message['user_input_asl']}")
+                if "video_urls" in message:
+                    for video_url in message["video_urls"]:
+                        render_video(video_url, autoplay=autoplay, max_size=size_px)
+                if "missing_videos" in message and message["missing_videos"]:
+                    st.warning(f"⚠️ Videos not available for: {', '.join(message['missing_videos'])}")
 
     # Chat input
     if prompt := st.chat_input("Type your message..."):
