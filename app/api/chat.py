@@ -102,7 +102,7 @@ async def list_models():
                 "created": 1704067200,
                 "owned_by": "gesturegpt",
                 "permission": [],
-                "root": "signalapi-v1",
+                "root": "gesturegpt-v1",
                 "parent": None,
             }
         ]
