@@ -32,9 +32,8 @@ async def generate_sign_language(request: SignLanguageRequest, http_request: Req
             format=request.format
         )
 
-        # Convert relative URLs to absolute URLs
-        base_url = str(http_request.base_url).rstrip('/')
-        absolute_video_urls = [f"{base_url}{url}" for url in video_urls]
+        # Video URLs from SignASL API are already absolute, no need to prepend base_url
+        absolute_video_urls = video_urls
 
         # If there are missing words, return 404 with partial results
         if missing_words:

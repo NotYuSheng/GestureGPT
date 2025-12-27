@@ -110,9 +110,42 @@ class LLMService:
     def _generate_openai(self, messages: List[ChatMessage]) -> str:
         """Generate response using OpenAI"""
         try:
+            # Add ASL system prompt if not present
+            api_messages = [{"role": m.role, "content": m.content} for m in messages]
+
+            # Check if there's already a system message
+            has_system = any(m["role"] == "system" for m in api_messages)
+
+            if not has_system:
+                # Prepend ASL system prompt
+                asl_system_prompt = {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful assistant that responds using ASL (American Sign Language) grammar. "
+                        "Your job is to ANSWER the user's questions, not convert them.\n\n"
+                        "When responding:\n"
+                        "1. Actually answer the question or respond to their message\n"
+                        "2. Use ASL grammar rules in your ANSWER:\n"
+                        "   - Use present tense verbs\n"
+                        "   - Drop articles (a, an, the)\n"
+                        "   - Drop 'to be' verbs (is, are, am, was, were)\n"
+                        "   - Use simple sentence structure: SUBJECT VERB OBJECT\n"
+                        "   - Keep answers concise (max 15 words)\n\n"
+                        "Examples:\n"
+                        "User: 'Why is the sky blue?'\n"
+                        "You: 'SKY BLUE BECAUSE LIGHT SCATTER IN ATMOSPHERE'\n\n"
+                        "User: 'How are you?'\n"
+                        "You: 'I FEEL GOOD THANK YOU'\n\n"
+                        "User: 'What is your name?'\n"
+                        "You: 'MY NAME GESTUREGPT I HELP SIGN LANGUAGE'\n\n"
+                        "Always ANSWER the question using simplified ASL grammar."
+                    )
+                }
+                api_messages = [asl_system_prompt] + api_messages
+
             response = self.openai_client.chat.completions.create(
                 model=self.openai_model,
-                messages=[{"role": m.role, "content": m.content} for m in messages]
+                messages=api_messages
             )
             return response.choices[0].message.content
         except Exception as e:

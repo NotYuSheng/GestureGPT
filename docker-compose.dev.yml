@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # GestureGPT Backend API (Development with hot reload)
   gesturegpt-backend:

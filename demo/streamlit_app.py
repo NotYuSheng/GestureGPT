@@ -1,14 +1,27 @@
+import os
 import streamlit as st
 import requests
-import os
-from datetime import datetime
 
 # Configuration
-SIGNALAPI_URL = os.getenv("SIGNALAPI_URL", "http://localhost:8000")
+GESTUREGPT_URL = os.getenv("GESTUREGPT_URL", "http://localhost:8000")
+
+# Helper function to render video with autoplay
+def render_video(video_url: str, autoplay: bool = True, max_size: str = "400px"):
+    """Render a video with optional autoplay and custom size."""
+    autoplay_attr = "autoplay muted loop" if autoplay else ""
+    html = f"""
+    <div class="video-container">
+        <video {autoplay_attr} controls style="max-width: {max_size}; max-height: {max_size};">
+            <source src="{video_url}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
 
 # Page config
 st.set_page_config(
-    page_title="SignalAPI Demo",
+    page_title="GestureGPT Demo",
     page_icon="👋",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -31,13 +44,22 @@ st.markdown("""
     .video-container {
         display: flex;
         justify-content: center;
-        margin: 2rem 0;
+        margin: 1rem 0;
+    }
+    /* Control video dimensions */
+    video {
+        max-width: 400px;
+        max-height: 400px;
+        width: auto;
+        height: auto;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 </style>
 """, unsafe_allow_html=True)
 
 # Header
-st.markdown('<h1 class="main-header">👋 SignalAPI Demo</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">👋 GestureGPT Demo</h1>', unsafe_allow_html=True)
 st.markdown('<p class="subtitle">AI-powered Sign Language Generation</p>', unsafe_allow_html=True)
 
 # Sidebar
@@ -56,32 +78,50 @@ with st.sidebar:
         help="Select output video format"
     )
 
+    st.subheader("Video Playback")
+
+    video_size = st.select_slider(
+        "Video Size",
+        options=["Small (200px)", "Medium (400px)", "Large (600px)", "X-Large (800px)"],
+        value="Medium (400px)",
+        help="Control the maximum size of sign language videos"
+    )
+
+    autoplay = st.checkbox(
+        "Auto-play videos",
+        value=True,
+        help="Videos will play automatically when displayed"
+    )
+
     st.divider()
 
     st.header("ℹ️ About")
     st.info(
-        "SignalAPI converts text to American Sign Language (ASL) videos. "
-        "It features an OpenAI-compatible API for seamless integration."
+        "GestureGPT converts text to American Sign Language (ASL) videos. "
+        "It features an OpenAI-compatible API powered by vLLM for seamless integration."
     )
 
     # API Health Check
     try:
-        health_response = requests.get(f"{SIGNALAPI_URL}/health", timeout=5)
+        health_response = requests.get(f"{GESTUREGPT_URL}/health", timeout=5)
         if health_response.status_code == 200:
             st.success("✅ API Connected")
             health_data = health_response.json()
-            st.caption(f"Version: {health_data.get('version', 'Unknown')}")
+            st.caption(f"Status: {health_data.get('status', 'Unknown')}")
         else:
             st.error("❌ API Error")
     except:
         st.error("❌ API Offline")
-        st.caption(f"Endpoint: {SIGNALAPI_URL}")
+        st.caption(f"Endpoint: {GESTUREGPT_URL}")
+
+# Extract pixel value from size setting
+size_px = video_size.split("(")[1].split(")")[0]
 
 # Main content
 tab1, tab2, tab3 = st.tabs(["💬 Chat", "🎯 Direct Conversion", "📚 API Docs"])
 
 with tab1:
-    st.header("Chat with SignalAPI")
+    st.header("Chat with GestureGPT")
     st.markdown("Send messages and receive responses in sign language!")
 
     # Initialize chat history
@@ -92,8 +132,13 @@ with tab1:
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-            if "video_url" in message:
-                st.video(message["video_url"])
+            if "user_input_asl" in message and message["user_input_asl"]:
+                st.info(f"💡 **Your message in ASL:** {message['user_input_asl']}")
+            if "video_urls" in message:
+                for video_url in message["video_urls"]:
+                    render_video(video_url, autoplay=autoplay, max_size=size_px)
+            if "missing_videos" in message and message["missing_videos"]:
+                st.warning(f"⚠️ Videos not available for: {', '.join(message['missing_videos'])}")
 
     # Chat input
     if prompt := st.chat_input("Type your message..."):
@@ -113,9 +158,9 @@ with tab1:
                     ]
 
                     response = requests.post(
-                        f"{SIGNALAPI_URL}/v1/chat/completions",
+                        f"{GESTUREGPT_URL}/v1/chat/completions",
                         json={
-                            "model": "signalapi-v1",
+                            "model": "gesturegpt-v1",
                             "messages": api_messages,
                             "format": video_format
                         },
@@ -125,17 +170,32 @@ with tab1:
                     if response.status_code == 200:
                         data = response.json()
                         assistant_message = data["choices"][0]["message"]["content"]
-                        video_url = data["choices"][0].get("video_url", "")
+                        video_urls = data["choices"][0].get("video_urls", [])
+                        missing_videos = data["choices"][0].get("missing_videos", [])
 
                         st.markdown(assistant_message)
-                        if video_url:
-                            st.video(video_url)
+
+                        # Show ASL suggestion for user input
+                        user_input_asl = data["choices"][0].get("user_input_asl")
+                        if user_input_asl:
+                            st.info(f"💡 **Your message in ASL:** {user_input_asl}")
+
+                        # Display videos with autoplay
+                        if video_urls:
+                            for video_url in video_urls:
+                                render_video(video_url, autoplay=autoplay, max_size=size_px)
+
+                        # Show missing videos warning
+                        if missing_videos:
+                            st.warning(f"⚠️ Videos not available for: {', '.join(missing_videos)}")
 
                         # Add assistant message to chat
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": assistant_message,
-                            "video_url": video_url
+                            "video_urls": video_urls,
+                            "missing_videos": missing_videos,
+                            "user_input_asl": user_input_asl
                         })
                     else:
                         st.error(f"API Error: {response.status_code}")
@@ -163,8 +223,6 @@ with tab2:
             max_chars=500
         )
 
-        include_subtitles = st.checkbox("Include text subtitles", value=True)
-
         generate_button = st.button("🎬 Generate Sign Language Video", type="primary", use_container_width=True)
 
     with col2:
@@ -180,11 +238,10 @@ with tab2:
         with st.spinner("Generating sign language video..."):
             try:
                 response = requests.post(
-                    f"{SIGNALAPI_URL}/api/sign-language/generate",
+                    f"{GESTUREGPT_URL}/api/sign-language/generate",
                     json={
                         "text": text_input,
-                        "format": video_format,
-                        "include_subtitles": include_subtitles
+                        "format": video_format
                     },
                     timeout=30
                 )
@@ -192,29 +249,40 @@ with tab2:
                 if response.status_code == 200:
                     data = response.json()
 
-                    st.success("✅ Video generated successfully!")
+                    st.success("✅ Videos generated successfully!")
 
-                    # Display video
-                    st.markdown("### Generated Video")
-                    st.video(data["video_url"])
+                    # Show original and normalized text
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.markdown("### Original Text")
+                        st.info(data.get('text', ''))
+                    with col2:
+                        st.markdown("### Normalized Text")
+                        st.info(data.get('normalized_text', ''))
+
+                    # Display videos with autoplay
+                    st.markdown("### Generated Videos")
+                    video_urls = data.get("video_urls", [])
+
+                    if video_urls:
+                        for video_url in video_urls:
+                            render_video(video_url, autoplay=autoplay, max_size=size_px)
+                    else:
+                        st.warning("No videos available")
+
+                    # Show missing videos warning
+                    missing_videos = data.get("missing_videos", [])
+                    if missing_videos:
+                        st.warning(f"⚠️ Videos not available for: {', '.join(missing_videos)}")
 
                     # Display metadata
                     col1, col2, col3 = st.columns(3)
                     with col1:
-                        st.metric("Duration", f"{data.get('duration', 0):.1f}s")
+                        st.metric("Videos Found", len(video_urls))
                     with col2:
                         st.metric("Format", data.get('format', 'N/A').upper())
                     with col3:
-                        st.metric("Status", "✅ Success" if data.get('success') else "❌ Failed")
-
-                    # Show text
-                    if data.get('text'):
-                        st.markdown("### Original Text")
-                        st.info(data['text'])
-
-                    # Download button
-                    st.markdown("### Download")
-                    st.markdown(f"[📥 Download Video]({data['video_url']})")
+                        st.metric("Status", "✅ Success" if data.get('success') else "⚠️ Partial")
 
                 else:
                     st.error(f"API Error: {response.status_code}")
@@ -240,13 +308,18 @@ with tab3:
     response = requests.post(
         "http://localhost:8000/v1/chat/completions",
         json={
-            "model": "signalapi-v1",
+            "model": "gesturegpt-v1",
             "messages": [
                 {"role": "user", "content": "Hello, how are you?"}
             ],
             "format": "mp4"
         }
     )
+
+    # Response includes video_urls array
+    data = response.json()
+    video_urls = data["choices"][0]["video_urls"]
+    missing_videos = data["choices"][0].get("missing_videos", [])
     ```
 
     ### Direct Sign Language Endpoint
@@ -258,10 +331,14 @@ with tab3:
         "http://localhost:8000/api/sign-language/generate",
         json={
             "text": "Hello, how are you?",
-            "format": "mp4",
-            "include_subtitles": true
+            "format": "mp4"
         }
     )
+
+    # Response includes multiple video URLs
+    data = response.json()
+    for video_url in data["video_urls"]:
+        print(video_url)
     ```
 
     ### Using with OpenAI Python SDK
@@ -275,9 +352,12 @@ with tab3:
     )
 
     response = client.chat.completions.create(
-        model="signalapi-v1",
+        model="gesturegpt-v1",
         messages=[{"role": "user", "content": "Hello!"}]
     )
+
+    # Access video URLs from response
+    print(response.choices[0].video_urls)
     ```
     """)
 
@@ -285,7 +365,7 @@ with tab3:
 
     st.markdown("### Available Models")
     try:
-        models_response = requests.get(f"{SIGNALAPI_URL}/v1/models", timeout=5)
+        models_response = requests.get(f"{GESTUREGPT_URL}/v1/models", timeout=5)
         if models_response.status_code == 200:
             st.json(models_response.json())
         else:
@@ -298,8 +378,8 @@ st.divider()
 st.markdown(
     """
     <div style="text-align: center; color: #666; padding: 2rem 0;">
-        <p>SignalAPI - Sign Language LLM-style API</p>
-        <p>Built with FastAPI, Streamlit, and OpenCV</p>
+        <p>GestureGPT - Sign Language LLM-style API</p>
+        <p>Built with FastAPI, Streamlit, and vLLM</p>
     </div>
     """,
     unsafe_allow_html=True

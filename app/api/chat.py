@@ -40,9 +40,14 @@ async def create_chat_completion(request: ChatCompletionRequest, http_request: R
             format=request.format
         )
 
-        # Convert relative URLs to absolute URLs
-        base_url = str(http_request.base_url).rstrip('/')
-        absolute_video_urls = [f"{base_url}{url}" for url in video_urls]
+        # Video URLs from SignASL API are already absolute, no need to prepend base_url
+        absolute_video_urls = video_urls
+
+        # Convert user's input to ASL format for suggestion
+        _, _, user_input_asl = sign_service.generate_video(
+            last_user_message,
+            format=request.format
+        )
 
         # Calculate token counts (approximate - based on words in normalized text)
         prompt_tokens = sum(len(msg.content.split()) for msg in request.messages)
@@ -56,7 +61,8 @@ async def create_chat_completion(request: ChatCompletionRequest, http_request: R
                 content=assistant_response
             ),
             finish_reason="stop",
-            video_urls=absolute_video_urls
+            video_urls=absolute_video_urls,
+            user_input_asl=user_input_asl
         )
 
         # Add missing_videos if there are any
