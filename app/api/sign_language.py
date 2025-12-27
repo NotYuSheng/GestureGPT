@@ -1,38 +1,59 @@
 from fastapi import APIRouter, HTTPException, Request
-from app.models.schemas import SignLanguageRequest, SignLanguageResponse
-from app.services.sign_language_service import SignLanguageService
-import os
+from app.models.schemas import (
+    SignLanguageRequest,
+    SignLanguageResponse,
+    ErrorResponse,
+    VideoListResponse,
+    VideoLookupResponse,
+    VideoInfo
+)
+from app.services.sign_language_service import get_sign_language_service
 
 router = APIRouter()
-sign_service = SignLanguageService()
+sign_service = get_sign_language_service()
 
 
 @router.post("/generate", response_model=SignLanguageResponse)
 async def generate_sign_language(request: SignLanguageRequest, http_request: Request):
     """
-    Direct endpoint to convert text to sign language video.
+    Direct endpoint to convert text to sign language videos.
 
-    This endpoint bypasses the LLM and directly converts provided text to sign language.
+    This endpoint bypasses the LLM and directly converts provided text to sign language
+    by looking up videos from the repository.
+
+    Returns:
+        - 200: Success with video URLs
+        - 404: Some or all words not found in repository
     """
     try:
-        # Generate sign language video
-        video_path, duration = sign_service.generate_video(
+        # Lookup sign language videos
+        video_urls, missing_words, normalized_text = sign_service.generate_video(
             request.text,
             format=request.format
         )
 
-        # Convert to relative URL
-        video_filename = os.path.basename(video_path)
+        # Convert relative URLs to absolute URLs
         base_url = str(http_request.base_url).rstrip('/')
-        video_url = f"{base_url}/videos/{video_filename}"
+        absolute_video_urls = [f"{base_url}{url}" for url in video_urls]
 
-        # Create response
+        # If there are missing words, return 404 with partial results
+        if missing_words:
+            return SignLanguageResponse(
+                success=False,
+                video_urls=absolute_video_urls,
+                text=request.text,
+                normalized_text=normalized_text,
+                format=request.format,
+                missing_videos=missing_words
+            )
+
+        # Success - all words found
         response = SignLanguageResponse(
             success=True,
-            video_url=video_url,
-            text=request.text if request.include_subtitles else "",
-            format=request.format,
-            duration=duration
+            video_urls=absolute_video_urls,
+            text=request.text,
+            normalized_text=normalized_text,
+            format=request.format
         )
 
         return response
@@ -40,26 +61,83 @@ async def generate_sign_language(request: SignLanguageRequest, http_request: Req
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Error generating sign language video: {str(e)}"
+            detail=f"Error looking up sign language videos: {str(e)}"
         )
 
 
-@router.get("/video/{filename}")
-async def get_video_info(filename: str):
+@router.get("/videos/available", response_model=VideoListResponse)
+async def list_available_videos():
     """
-    Get information about a generated video.
+    List all available sign language videos in the repository.
+
+    Returns a list of all words/signs that have videos available.
     """
-    video_path = os.path.join(sign_service.output_dir, filename)
+    try:
+        videos = sign_service.repository.get_all_videos()
 
-    if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="Video not found")
+        # Convert VideoInfo objects to dicts
+        video_list = [
+            VideoInfo(
+                word=video.word,
+                url=video.url,
+                format=video.format
+            )
+            for video in videos
+        ]
 
-    info = sign_service.get_video_info(video_path)
-    if not info:
-        raise HTTPException(status_code=500, detail="Unable to read video information")
+        return VideoListResponse(
+            success=True,
+            total_videos=len(video_list),
+            videos=video_list
+        )
 
-    return {
-        "filename": filename,
-        "exists": True,
-        **info
-    }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error retrieving video list: {str(e)}"
+        )
+
+
+@router.get("/videos/lookup/{word}")
+async def lookup_word_video(word: str, http_request: Request):
+    """
+    Lookup video URL for a specific word.
+
+    Args:
+        word: The word to look up (case-insensitive)
+
+    Returns:
+        - 200: Video found
+        - 404: Video not found
+    """
+    try:
+        video_url = sign_service.repository.lookup_word(word)
+
+        if video_url is None:
+            return ErrorResponse(
+                success=False,
+                error="Video not found",
+                detail=f"No video available for sign: {word.upper()}"
+            )
+
+        # Convert relative URL to absolute URL
+        base_url = str(http_request.base_url).rstrip('/')
+        absolute_url = f"{base_url}{video_url}"
+
+        # Determine format from URL
+        format_ext = "mp4"
+        if video_url.endswith(".gif"):
+            format_ext = "gif"
+
+        return VideoLookupResponse(
+            success=True,
+            word=word.upper(),
+            url=absolute_url,
+            format=format_ext
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error looking up video: {str(e)}"
+        )

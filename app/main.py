@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import chat, sign_language
 from app.models.schemas import HealthResponse
+from app.services.video_repository import get_video_repository
 import os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -12,7 +13,7 @@ load_dotenv()
 
 # Create FastAPI app
 app = FastAPI(
-    title=os.getenv("API_TITLE", "SignalAPI"),
+    title=os.getenv("API_TITLE", "GestureGPT"),
     version=os.getenv("API_VERSION", "1.0.0"),
     description=os.getenv("API_DESCRIPTION", "Sign Language LLM-style API - Convert text to ASL videos"),
     docs_url="/docs",
@@ -43,9 +44,13 @@ app.include_router(sign_language.router, prefix="/api/sign-language", tags=["Sig
 @app.get("/", response_model=HealthResponse)
 async def root():
     """Root endpoint - health check"""
+    video_repo = get_video_repository()
     return HealthResponse(
         status="healthy",
         version=os.getenv("API_VERSION", "1.0.0"),
+        llm_provider=os.getenv("LLM_PROVIDER", "placeholder"),
+        video_repository="local",
+        total_videos=video_repo.get_total_videos(),
         timestamp=datetime.utcnow()
     )
 
@@ -53,9 +58,13 @@ async def root():
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
+    video_repo = get_video_repository()
     return HealthResponse(
         status="healthy",
         version=os.getenv("API_VERSION", "1.0.0"),
+        llm_provider=os.getenv("LLM_PROVIDER", "placeholder"),
+        video_repository="local",
+        total_videos=video_repo.get_total_videos(),
         timestamp=datetime.utcnow()
     )
 
