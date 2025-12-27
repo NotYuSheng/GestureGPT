@@ -12,7 +12,7 @@ Transform text into American Sign Language (ASL) videos through an OpenAI-compat
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com/)
 [![Python](https://img.shields.io/badge/python-3.11+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![WIP](https://img.shields.io/badge/status-work%20in%20progress-yellow?style=for-the-badge)](https://github.com/NotYuSheng/GestureGPT)
+[![Status](https://img.shields.io/badge/status-active-success?style=for-the-badge)](https://github.com/NotYuSheng/GestureGPT)
 
 [Quick Start](#-quick-start) • [Documentation](#-documentation) • [API Reference](#-api-reference) • [Contributing](#-contributing)
 
