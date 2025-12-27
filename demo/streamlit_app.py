@@ -46,7 +46,6 @@ st.markdown("""
         justify-content: center;
         margin: 1rem 0;
     }
-    /* Control video dimensions */
     video {
         max-width: 400px;
         max-height: 400px;
@@ -54,25 +53,6 @@ st.markdown("""
         height: auto;
         border-radius: 8px;
         box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    /* Chat messages container with scroll */
-    [data-testid="stVerticalBlock"] > [data-testid="stVerticalBlock"] {
-        max-height: 600px;
-        overflow-y: auto;
-        margin-bottom: 1rem;
-    }
-    /* Keep chat input at bottom */
-    .stChatFloatingInputContainer {
-        position: sticky;
-        bottom: 0;
-        background-color: white;
-        padding: 1rem 0;
-        z-index: 100;
-        border-top: 1px solid #e0e0e0;
-    }
-    /* Improve chat message spacing */
-    .stChatMessage {
-        margin-bottom: 1rem;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -85,10 +65,18 @@ st.markdown('<p class="subtitle">AI-powered Sign Language Generation</p>', unsaf
 with st.sidebar:
     st.header("⚙️ Settings")
 
-    api_mode = st.radio(
-        "API Mode",
-        ["Chat (OpenAI-compatible)", "Direct Conversion"],
-        help="Choose between chat-based or direct text-to-sign conversion"
+    # Clear chat button at the top
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        if "messages" in st.session_state:
+            st.session_state.messages = []
+            st.rerun()
+
+    st.divider()
+
+    page_mode = st.radio(
+        "Page Mode",
+        ["💬 Chat", "🎯 Direct Conversion", "📚 API Docs"],
+        help="Choose the interface mode"
     )
 
     video_format = st.selectbox(
@@ -136,10 +124,8 @@ with st.sidebar:
 # Extract pixel value from size setting
 size_px = video_size.split("(")[1].split(")")[0]
 
-# Main content
-tab1, tab2, tab3 = st.tabs(["💬 Chat", "🎯 Direct Conversion", "📚 API Docs"])
-
-with tab1:
+# Main content - conditional rendering based on page mode
+if page_mode == "💬 Chat":
     st.header("Chat with GestureGPT")
     st.markdown("Send messages and receive responses in sign language!")
 
@@ -147,34 +133,37 @@ with tab1:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    # Create a container for chat messages with fixed height and scroll
-    chat_container = st.container()
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+            if "user_input_asl" in message and message["user_input_asl"]:
+                st.info(f"💡 **Your message in ASL:** {message['user_input_asl']}")
+            if "video_urls" in message:
+                # Display videos in a grid layout
+                num_videos = len(message["video_urls"])
+                if num_videos > 0:
+                    # Create columns based on number of videos (max 4 per row)
+                    cols_per_row = min(4, num_videos)
 
-    with chat_container:
-        # Display chat history
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
-                if "user_input_asl" in message and message["user_input_asl"]:
-                    st.info(f"💡 **Your message in ASL:** {message['user_input_asl']}")
-                if "video_urls" in message:
-                    for video_url in message["video_urls"]:
-                        render_video(video_url, autoplay=autoplay, max_size=size_px)
-                if "missing_videos" in message and message["missing_videos"]:
-                    st.warning(f"⚠️ Videos not available for: {', '.join(message['missing_videos'])}")
+                    for i in range(0, num_videos, cols_per_row):
+                        cols = st.columns(cols_per_row)
+                        for j, video_url in enumerate(message["video_urls"][i:i+cols_per_row]):
+                            with cols[j]:
+                                render_video(video_url, autoplay=autoplay, max_size=size_px)
+            if "missing_videos" in message and message["missing_videos"]:
+                st.warning(f"⚠️ Videos not available for: {', '.join(message['missing_videos'])}")
 
-    # Chat input
+    # Chat input - MUST be last element on page
     if prompt := st.chat_input("Type your message..."):
-        # Add user message to chat
+        # Add user message to history
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
 
-        # Get response from API
+        # Show loading message
         with st.chat_message("assistant"):
-            with st.spinner("Generating sign language response..."):
+            with st.spinner("Thinking and generating sign language..."):
+                # Call API
                 try:
-                    # Prepare messages for API
                     api_messages = [
                         {"role": msg["role"], "content": msg["content"]}
                         for msg in st.session_state.messages
@@ -195,24 +184,8 @@ with tab1:
                         assistant_message = data["choices"][0]["message"]["content"]
                         video_urls = data["choices"][0].get("video_urls", [])
                         missing_videos = data["choices"][0].get("missing_videos", [])
-
-                        st.markdown(assistant_message)
-
-                        # Show ASL suggestion for user input
                         user_input_asl = data["choices"][0].get("user_input_asl")
-                        if user_input_asl:
-                            st.info(f"💡 **Your message in ASL:** {user_input_asl}")
 
-                        # Display videos with autoplay
-                        if video_urls:
-                            for video_url in video_urls:
-                                render_video(video_url, autoplay=autoplay, max_size=size_px)
-
-                        # Show missing videos warning
-                        if missing_videos:
-                            st.warning(f"⚠️ Videos not available for: {', '.join(missing_videos)}")
-
-                        # Add assistant message to chat
                         st.session_state.messages.append({
                             "role": "assistant",
                             "content": assistant_message,
@@ -221,18 +194,24 @@ with tab1:
                             "user_input_asl": user_input_asl
                         })
                     else:
-                        st.error(f"API Error: {response.status_code}")
-                        st.json(response.json())
+                        st.session_state.messages.append({
+                            "role": "assistant",
+                            "content": f"API Error: {response.status_code}",
+                            "video_urls": [],
+                            "missing_videos": []
+                        })
 
                 except Exception as e:
-                    st.error(f"Error: {str(e)}")
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": f"Error: {str(e)}",
+                        "video_urls": [],
+                        "missing_videos": []
+                    })
 
-    # Clear chat button
-    if st.button("🗑️ Clear Chat History"):
-        st.session_state.messages = []
         st.rerun()
 
-with tab2:
+elif page_mode == "🎯 Direct Conversion":
     st.header("Direct Text to Sign Language")
     st.markdown("Convert any text directly to sign language video")
 
@@ -288,8 +267,15 @@ with tab2:
                     video_urls = data.get("video_urls", [])
 
                     if video_urls:
-                        for video_url in video_urls:
-                            render_video(video_url, autoplay=autoplay, max_size=size_px)
+                        # Display videos in a grid layout
+                        num_videos = len(video_urls)
+                        cols_per_row = min(4, num_videos)
+
+                        for i in range(0, num_videos, cols_per_row):
+                            cols = st.columns(cols_per_row)
+                            for j, video_url in enumerate(video_urls[i:i+cols_per_row]):
+                                with cols[j]:
+                                    render_video(video_url, autoplay=autoplay, max_size=size_px)
                     else:
                         st.warning("No videos available")
 
@@ -317,7 +303,7 @@ with tab2:
     elif generate_button and not text_input:
         st.warning("⚠️ Please enter some text first!")
 
-with tab3:
+elif page_mode == "📚 API Docs":
     st.header("API Documentation")
 
     st.markdown("""
@@ -395,15 +381,3 @@ with tab3:
             st.error("Failed to fetch models")
     except:
         st.error("API unavailable")
-
-# Footer
-st.divider()
-st.markdown(
-    """
-    <div style="text-align: center; color: #666; padding: 2rem 0;">
-        <p>GestureGPT - Sign Language LLM-style API</p>
-        <p>Built with FastAPI, Streamlit, and vLLM</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)

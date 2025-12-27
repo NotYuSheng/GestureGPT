@@ -12,7 +12,7 @@ class ChatMessage(BaseModel):
 
 class ChatCompletionRequest(BaseModel):
     """OpenAI-compatible chat completion request"""
-    model: str = Field(default="signalapi-v1", description="Model identifier")
+    model: str = Field(default="gesturegpt-v1", description="Model identifier")
     messages: List[ChatMessage] = Field(..., min_length=1, description="List of messages in the conversation")
     temperature: Optional[float] = Field(default=1.0, ge=0, le=2, description="Sampling temperature (ignored)")
     max_tokens: Optional[int] = Field(default=None, description="Maximum tokens (ignored)")
@@ -22,7 +22,7 @@ class ChatCompletionRequest(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "model": "signalapi-v1",
+                "model": "gesturegpt-v1",
                 "messages": [
                     {"role": "user", "content": "Hello, how are you?"}
                 ],
@@ -63,7 +63,7 @@ class ChatCompletionResponse(BaseModel):
                 "id": "chatcmpl-123",
                 "object": "chat.completion",
                 "created": 1677652288,
-                "model": "signalapi-v1",
+                "model": "gesturegpt-v1",
                 "choices": [{
                     "index": 0,
                     "message": {
