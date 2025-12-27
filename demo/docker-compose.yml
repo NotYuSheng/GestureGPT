@@ -1,5 +1,21 @@
 services:
-  backend:
+  # SignASL Scraper API (from GHCR)
+  signasl-api:
+    image: ghcr.io/notyusheng/signasl-api:latest
+    container_name: signasl-api
+    ports:
+      - "8001:8000"
+    volumes:
+      - signasl-cache:/app/cache
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  gesturegpt:
     image: ghcr.io/notyusheng/gesturegpt:latest
     container_name: gesturegpt-backend
     ports:
@@ -25,10 +41,15 @@ services:
       # Custom LLM (if LLM_PROVIDER=custom)
       - CUSTOM_LLM_ENDPOINT=${CUSTOM_LLM_ENDPOINT:-http://host.docker.internal:1234/v1/chat/completions}
       - CUSTOM_LLM_MODEL=${CUSTOM_LLM_MODEL:-local-model}
+
+      # SignASL API Configuration
+      - SIGNASL_API_URL=http://signasl-api:8000
     volumes:
       # Mount volumes for persistent video storage
       - ../output:/app/output
       - ../static:/app/static
+    depends_on:
+      - signasl-api
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
@@ -37,7 +58,7 @@ services:
       retries: 3
       start_period: 10s
 
-  demo:
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
@@ -45,10 +66,14 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - GESTUREGPT_URL=http://backend:8000
+      - GESTUREGPT_URL=http://gesturegpt:8000
     depends_on:
-      - backend
+      - gesturegpt
     restart: unless-stopped
+
+volumes:
+  signasl-cache:
+    name: signasl-cache
 
 networks:
   default:

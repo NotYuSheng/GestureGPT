@@ -65,7 +65,7 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt-backend:${{ env.GIT_TAG }}
+            ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt:${{ env.GIT_TAG }}
           platforms: linux/amd64,linux/arm64
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -73,7 +73,7 @@ jobs:
       - name: Tag and push as latest (if release)
         if: env.IS_RELEASE == 'true'
         run: |
-          docker pull ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt-backend:${{ env.GIT_TAG }}
-          docker tag ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt-backend:${{ env.GIT_TAG }} \
-                     ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt-backend:latest
-          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt-backend:latest
+          docker pull ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt:${{ env.GIT_TAG }}
+          docker tag ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt:${{ env.GIT_TAG }} \
+                     ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt:latest
+          docker push ghcr.io/${{ env.REPO_OWNER_LC }}/gesturegpt:latest
