@@ -1,1 +1,1 @@
-# SignalAPI - Sign Language LLM-style API
+# GestureGPT - Sign Language LLM-style API
