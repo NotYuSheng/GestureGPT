@@ -1,86 +1,46 @@
-# GestureGPT Demo
+# GestureGPT Streamlit Demo
 
-Interactive Streamlit demo for GestureGPT - a sign language LLM-style API.
+A simple chatbot interface to test the GestureGPT API.
 
 ## Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Prerequisites
+
+Make sure GestureGPT backend is running:
 
 ```bash
-# From the demo directory
-cd demo
+# From the project root
+docker compose up -d
 
-# Start both backend and demo
-docker-compose up -d
-
-# Access the demo at http://localhost:8501
+# Or run locally
+python -m app.main
 ```
 
-This will:
-1. Pull the backend from GHCR
-2. Build the Streamlit demo
-3. Start both services
+### Running the Demo
 
-### Option 2: Backend Only (Without Demo UI)
+1. Create a virtual environment and install dependencies:
 
 ```bash
 cd demo
-
-# Just run the backend
-docker-compose up -d backend
-
-# Access API docs at http://localhost:8000/docs
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
 ```
 
-### Option 3: Local Development
+2. Run the Streamlit app:
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Make sure backend is running (see above or use existing instance)
-
-# Run Streamlit
-streamlit run streamlit_app.py
-
-# Or specify backend URL
-SIGNALAPI_URL=http://localhost:8000 streamlit run streamlit_app.py
+venv/bin/streamlit run streamlit_app.py
 ```
+
+3. Open your browser to http://localhost:8501
 
 ## Configuration
 
-### Environment Variables
-
-Create a `.env` file in the demo directory:
+The demo connects to GestureGPT at `http://localhost:8000` by default. You can override this by setting the `GESTUREGPT_URL` environment variable:
 
 ```bash
-# For backend LLM configuration (optional)
-OPENAI_API_KEY=sk-...
-LLM_PROVIDER=openai
-OPENAI_MODEL=gpt-3.5-turbo
-
-# For demo app
-SIGNALAPI_URL=http://backend:8000
+GESTUREGPT_URL=http://your-api:8000 venv/bin/streamlit run streamlit_app.py
 ```
-
-### Using Real LLM
-
-Edit `docker-compose.yml` and uncomment the LLM configuration:
-
-```yaml
-environment:
-  # LLM Configuration
-  - LLM_PROVIDER=openai
-  - OPENAI_API_KEY=${OPENAI_API_KEY}
-  - OPENAI_MODEL=gpt-3.5-turbo
-```
-
-Then create `.env`:
-```bash
-OPENAI_API_KEY=sk-your-actual-key-here
-```
-
-See [LLM Configuration Guide](../docs/LLM_CONFIGURATION.md) for more options.
 
 ## Features
 
@@ -88,19 +48,21 @@ The demo provides three tabs:
 
 ### 💬 Chat
 - Interactive chat interface
-- Displays both text responses and sign language videos
+- Displays multiple sign language videos per response (one per word)
+- Shows warnings for missing videos
 - Conversation history
 - Clear chat functionality
 
 ### 🎯 Direct Conversion
 - Convert any text directly to sign language
+- View original and normalized text
+- Displays array of video URLs
+- Shows which words have missing videos
 - Choose video format (MP4 or GIF)
-- Download generated videos
-- View video metadata
 
 ### 📚 API Docs
-- Example code snippets
-- API endpoint documentation
+- Example code snippets for both endpoints
+- OpenAI SDK usage examples
 - Model information
 
 ## Usage
@@ -110,56 +72,18 @@ The demo provides three tabs:
 1. Open http://localhost:8501
 2. Go to the "Chat" tab
 3. Type your message in the chat input
-4. Receive text response + sign language video
+4. The LLM generates an ASL-friendly response
+5. Each word's video is displayed in sequence
+6. Missing videos are highlighted with warnings
 
 ### Direct Conversion Mode
 
 1. Go to the "Direct Conversion" tab
-2. Enter text in the text area
+2. Enter text in the text area (max 500 characters)
 3. Choose video format (MP4 or GIF)
 4. Click "Generate Sign Language Video"
-5. View or download the result
-
-## Screenshots
-
-### Chat Interface
-![Chat Interface](../docs/images/chat-demo.png) *(placeholder)*
-
-### Direct Conversion
-![Direct Conversion](../docs/images/direct-demo.png) *(placeholder)*
-
-## Development
-
-### File Structure
-
-```
-demo/
-├── streamlit_app.py      # Main Streamlit app
-├── requirements.txt      # Python dependencies
-├── Dockerfile           # Demo container image
-├── docker-compose.yml   # Orchestration (backend + demo)
-└── README.md           # This file
-```
-
-### Customization
-
-Edit `streamlit_app.py` to customize:
-- UI theme and styling
-- Chat prompts
-- Example messages
-- Video display settings
-
-### Local Development Workflow
-
-```bash
-# Terminal 1: Run backend
-cd ..
-python -m app.main
-
-# Terminal 2: Run demo with hot reload
-cd demo
-streamlit run streamlit_app.py
-```
+5. View the normalized text and all video URLs
+6. See which words are missing videos
 
 ## Troubleshooting
 
@@ -172,94 +96,47 @@ curl http://localhost:8000/health
 
 If not running:
 ```bash
-docker-compose up -d backend
+docker compose up -d
 ```
 
-### Can't Access Demo
+### Port 8501 Already in Use
 
-Make sure port 8501 is not in use:
+Kill existing Streamlit processes:
 ```bash
-lsof -i :8501
+lsof -ti:8501 | xargs kill -9
 ```
 
-Change port in docker-compose.yml if needed:
-```yaml
-ports:
-  - "8502:8501"  # Use 8502 instead
-```
-
-### Video Not Displaying
-
-1. Check browser console for errors
-2. Verify video URL is accessible
-3. Check backend logs: `docker-compose logs backend`
-
-### Demo Crashes
-
-Check logs:
+Or use a different port:
 ```bash
-docker-compose logs demo
+venv/bin/streamlit run streamlit_app.py --server.port 8502
 ```
 
-Restart demo:
+### Videos Not Displaying
+
+1. Check that the backend is accessible
+2. Verify video URLs in the browser console
+3. Check backend logs for errors
+
+## Development
+
+### File Structure
+
+```
+demo/
+├── streamlit_app.py      # Main Streamlit app
+├── requirements.txt      # Python dependencies
+├── venv/                # Virtual environment (gitignored)
+└── README.md           # This file
+```
+
+### Local Development Workflow
+
 ```bash
-docker-compose restart demo
+# Terminal 1: Run backend
+cd /home/ubuntu/Desktop/GestureGPT
+docker compose up -d
+
+# Terminal 2: Run demo with hot reload
+cd demo
+venv/bin/streamlit run streamlit_app.py
 ```
-
-## Stopping the Demo
-
-```bash
-# Stop all services
-docker-compose down
-
-# Stop but keep containers
-docker-compose stop
-
-# Remove everything including volumes
-docker-compose down -v
-```
-
-## Production Deployment
-
-For production deployment of the demo:
-
-1. **Add Authentication**
-   ```python
-   # Add to streamlit_app.py
-   import streamlit_authenticator as stauth
-   # Configure auth
-   ```
-
-2. **Use HTTPS**
-   - Deploy behind reverse proxy (Nginx)
-   - Add SSL certificates
-
-3. **Resource Limits**
-   ```yaml
-   # In docker-compose.yml
-   deploy:
-     resources:
-       limits:
-         cpus: '1.0'
-         memory: 512M
-   ```
-
-4. **Environment Variables**
-   ```bash
-   # Use secrets management
-   docker secret create openai_key openai_key.txt
-   ```
-
-## Support
-
-For issues with the demo:
-1. Check [troubleshooting](#troubleshooting) above
-2. View [backend docs](../docs/)
-3. Open issue: https://github.com/NotYuSheng/GestureGPT/issues
-
-## Links
-
-- [Main README](../README.md)
-- [API Documentation](http://localhost:8000/docs)
-- [LLM Configuration](../docs/LLM_CONFIGURATION.md)
-- [Deployment Guide](../docs/DEPLOYMENT.md)

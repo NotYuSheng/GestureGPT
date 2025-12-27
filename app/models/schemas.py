@@ -38,6 +38,7 @@ class ChatCompletionChoice(BaseModel):
     finish_reason: str = Field(default="stop", description="Reason for completion finish")
     video_urls: List[str] = Field(default_factory=list, description="URLs to sign language videos")
     missing_videos: Optional[List[str]] = Field(None, description="Words without available videos")
+    user_input_asl: Optional[str] = Field(None, description="User's input converted to ASL format (text suggestion)")
 
 
 class ChatCompletionUsage(BaseModel):

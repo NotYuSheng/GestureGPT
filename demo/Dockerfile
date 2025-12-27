@@ -8,11 +8,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-COPY demo/requirements.txt .
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy demo app
-COPY demo/streamlit_app.py .
+COPY streamlit_app.py .
 
 # Expose Streamlit port
 EXPOSE 8501

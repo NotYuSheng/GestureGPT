@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # GestureGPT Backend API
   gesturegpt-backend:
@@ -9,14 +7,10 @@ services:
     container_name: gesturegpt-backend
     ports:
       - "8000:8000"
-    environment:
-      - API_TITLE=GestureGPT
-      - API_VERSION=1.0.0
-      - API_DESCRIPTION=Sign Language LLM-style API - Convert text to ASL videos
-      - LLM_PROVIDER=placeholder
-      - HOST=0.0.0.0
-      - PORT=8000
-      - SIGNASL_API_URL=http://signasl-api:8001
+    env_file:
+      - .env
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allow container to access host services
     volumes:
       - ./data:/app/data
       - ./output:/app/output

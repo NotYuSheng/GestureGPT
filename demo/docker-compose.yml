@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   backend:
     image: ghcr.io/notyusheng/gesturegpt:latest
@@ -47,7 +45,7 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - SIGNALAPI_URL=http://backend:8000
+      - GESTUREGPT_URL=http://backend:8000
     depends_on:
       - backend
     restart: unless-stopped
