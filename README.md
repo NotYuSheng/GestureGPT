@@ -29,28 +29,59 @@ See [architecture.puml](docs/architecture.puml) for the workflow diagram source.
 
 ## 🚀 Quick Start
 
-### Using Docker (Recommended)
+### Using Docker Compose (Recommended)
+
+This runs both GestureGPT backend and the SignASL scraper API together:
 
 ```bash
 # Clone the repository
 git clone https://github.com/NotYuSheng/GestureGPT.git
-cd GestureGPT/demo
+cd GestureGPT
 
-# Start backend + demo
-docker-compose up -d
+# Start both services (GestureGPT + SignASL API)
+docker compose up -d
 
-# Access the demo at http://localhost:8501
-# Access the API at http://localhost:8000
+# View logs
+docker compose logs -f
+
+# Services available at:
+# - GestureGPT API: http://localhost:8000
+# - GestureGPT Docs: http://localhost:8000/docs
+# - SignASL API: http://localhost:8001
+# - SignASL Docs: http://localhost:8001/docs
 ```
 
-### Using Pre-built Image
+**Services included:**
+- **gesturegpt-backend** (port 8000) - Main API with OpenAI-compatible endpoints
+- **signasl-api** (port 8001) - ASL video scraper from [SignASL.org](https://github.com/NotYuSheng/signaslAPI)
+
+### Development Mode with Hot Reload
 
 ```bash
-# Pull and run the backend
-docker pull ghcr.io/notyusheng/gesturegpt:latest
-docker run -p 8000:8000 ghcr.io/notyusheng/gesturegpt:latest
+# Start with hot reload enabled
+docker compose -f docker-compose.dev.yml up -d
+
+# Code changes will automatically reload the server
+```
+
+### Using Pre-built Images
+
+**GestureGPT Backend:**
+```bash
+# Pull and run from GHCR
+docker pull ghcr.io/notyusheng/gesturegpt-backend:latest
+docker run -d -p 8000:8000 ghcr.io/notyusheng/gesturegpt-backend:latest
 
 # Access API docs at http://localhost:8000/docs
+```
+
+**SignASL Scraper API:**
+```bash
+# Pull and run from GHCR
+docker pull ghcr.io/notyusheng/signasl-api:latest
+docker run -d -p 8001:8000 \
+  -v ./cache:/app/cache \
+  ghcr.io/notyusheng/signasl-api:latest
 ```
 
 **See [Docker Quick Start Guide](docs/DOCKER_QUICKSTART.md) for detailed instructions.**
