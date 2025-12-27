@@ -1,14 +1,13 @@
 from fastapi import APIRouter, HTTPException, Request
 from app.models.schemas import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionChoice, ChatMessage
-from app.services.sign_language_service import SignLanguageService
+from app.services.sign_language_service import get_sign_language_service
 from app.services.llm_service import LLMService
 import time
-import os
 
 router = APIRouter()
 
 # Initialize services
-sign_service = SignLanguageService()
+sign_service = get_sign_language_service()
 llm_service = LLMService()
 
 
@@ -32,41 +31,44 @@ async def create_chat_completion(request: ChatCompletionRequest, http_request: R
 
         last_user_message = user_messages[-1].content
 
-        # Generate text response using LLM service (placeholder)
-        # In production, you could integrate with a real LLM here
+        # Generate text response using LLM service
         assistant_response = llm_service.generate_response(request.messages)
 
-        # Generate sign language video for the assistant's response
-        video_path, duration = sign_service.generate_video(
+        # Lookup sign language videos for the assistant's response
+        video_urls, missing_words, normalized_text = sign_service.generate_video(
             assistant_response,
             format=request.format
         )
 
-        # Convert to relative URL
-        video_filename = os.path.basename(video_path)
+        # Convert relative URLs to absolute URLs
         base_url = str(http_request.base_url).rstrip('/')
-        video_url = f"{base_url}/videos/{video_filename}"
+        absolute_video_urls = [f"{base_url}{url}" for url in video_urls]
 
-        # Calculate token counts (approximate)
+        # Calculate token counts (approximate - based on words in normalized text)
         prompt_tokens = sum(len(msg.content.split()) for msg in request.messages)
-        completion_tokens = len(assistant_response.split())
+        completion_tokens = len(normalized_text.split())
+
+        # Create choice with video URLs
+        choice = ChatCompletionChoice(
+            index=0,
+            message=ChatMessage(
+                role="assistant",
+                content=assistant_response
+            ),
+            finish_reason="stop",
+            video_urls=absolute_video_urls
+        )
+
+        # Add missing_videos if there are any
+        if missing_words:
+            choice.missing_videos = missing_words
 
         # Create response in OpenAI format
         response = ChatCompletionResponse(
             id=f"chatcmpl-{int(time.time())}",
             created=int(time.time()),
             model=request.model,
-            choices=[
-                ChatCompletionChoice(
-                    index=0,
-                    message=ChatMessage(
-                        role="assistant",
-                        content=assistant_response
-                    ),
-                    finish_reason="stop",
-                    video_url=video_url
-                )
-            ],
+            choices=[choice],
             usage={
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
@@ -89,10 +91,10 @@ async def list_models():
         "object": "list",
         "data": [
             {
-                "id": "signalapi-v1",
+                "id": "gesturegpt-v1",
                 "object": "model",
                 "created": 1704067200,
-                "owned_by": "signalapi",
+                "owned_by": "gesturegpt",
                 "permission": [],
                 "root": "signalapi-v1",
                 "parent": None,

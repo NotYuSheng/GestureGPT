@@ -36,7 +36,8 @@ class ChatCompletionChoice(BaseModel):
     index: int = Field(..., description="Choice index")
     message: ChatMessage = Field(..., description="Response message")
     finish_reason: str = Field(default="stop", description="Reason for completion finish")
-    video_url: Optional[str] = Field(None, description="URL to sign language video")
+    video_urls: List[str] = Field(default_factory=list, description="URLs to sign language videos")
+    missing_videos: Optional[List[str]] = Field(None, description="Words without available videos")
 
 
 class ChatCompletionUsage(BaseModel):
@@ -69,7 +70,12 @@ class ChatCompletionResponse(BaseModel):
                         "content": "Hello! I feel good. Thank you ask!"
                     },
                     "finish_reason": "stop",
-                    "video_url": "/videos/sign_abc123_1234567890.mp4"
+                    "video_urls": [
+                        "/videos/HELLO.mp4",
+                        "/videos/I.mp4",
+                        "/videos/FEEL.mp4",
+                        "/videos/GOOD.mp4"
+                    ]
                 }],
                 "usage": {
                     "prompt_tokens": 10,
@@ -100,20 +106,26 @@ class SignLanguageRequest(BaseModel):
 class SignLanguageResponse(BaseModel):
     """Response model for sign language video generation"""
     success: bool = Field(..., description="Whether the request was successful")
-    video_url: str = Field(..., description="URL to access the generated video")
-    text: str = Field(..., description="Original text for subtitles")
+    video_urls: List[str] = Field(..., description="URLs to access the sign language videos")
+    text: str = Field(..., description="Original text")
+    normalized_text: str = Field(..., description="Normalized text (uppercase tokens)")
     format: str = Field(..., description="Video format (mp4 or gif)")
-    duration: Optional[float] = Field(None, description="Video duration in seconds")
+    missing_videos: Optional[List[str]] = Field(None, description="Words without available videos")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Generation timestamp")
 
     class Config:
         json_schema_extra = {
             "example": {
                 "success": True,
-                "video_url": "/videos/hello_how_are_you_1234567890.mp4",
+                "video_urls": [
+                    "/videos/HELLO.mp4",
+                    "/videos/HOW.mp4",
+                    "/videos/ARE.mp4",
+                    "/videos/YOU.mp4"
+                ],
                 "text": "Hello, how are you?",
+                "normalized_text": "HELLO HOW ARE YOU",
                 "format": "mp4",
-                "duration": 3.5,
                 "timestamp": "2024-01-15T10:30:00"
             }
         }
@@ -130,4 +142,52 @@ class HealthResponse(BaseModel):
     """Health check response"""
     status: str = Field(..., description="Service status")
     version: str = Field(..., description="API version")
+    llm_provider: Optional[str] = Field(None, description="LLM provider being used")
+    video_repository: str = Field(default="local", description="Video repository type")
+    total_videos: int = Field(default=0, description="Total videos available")
     timestamp: datetime = Field(default_factory=datetime.utcnow, description="Current timestamp")
+
+
+# Video repository endpoint schemas
+class VideoInfo(BaseModel):
+    """Information about a single video in the repository"""
+    word: str = Field(..., description="The word/sign this video represents")
+    url: str = Field(..., description="URL to access the video")
+    format: str = Field(default="mp4", description="Video format")
+
+
+class VideoListResponse(BaseModel):
+    """Response for listing all available videos"""
+    success: bool = Field(default=True, description="Whether the request was successful")
+    total_videos: int = Field(..., description="Total number of videos available")
+    videos: List[VideoInfo] = Field(..., description="List of available videos")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "total_videos": 50,
+                "videos": [
+                    {"word": "HELLO", "url": "/videos/HELLO.mp4", "format": "mp4"},
+                    {"word": "WORLD", "url": "/videos/WORLD.mp4", "format": "mp4"}
+                ]
+            }
+        }
+
+
+class VideoLookupResponse(BaseModel):
+    """Response for single word video lookup"""
+    success: bool = Field(default=True, description="Whether the request was successful")
+    word: str = Field(..., description="The word that was looked up")
+    url: str = Field(..., description="URL to access the video")
+    format: str = Field(default="mp4", description="Video format")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "word": "HELLO",
+                "url": "/videos/HELLO.mp4",
+                "format": "mp4"
+            }
+        }
